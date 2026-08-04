@@ -467,6 +467,27 @@ export interface CadModelBase {
     y: number | string
     z: number | string
   }
+  /**
+   * Axis-aligned extent of the model measured in its own coordinate frame, the
+   * same frame as `modelOriginPosition`.
+   *
+   * `size` gives the extent but not where the box sits relative to the model
+   * origin, and the box is generally not centered on it, so `size` alone cannot
+   * say how much of the part is above the board. Since `modelOriginPosition` is
+   * the point placed on the board surface, these bounds supply the missing
+   * term. `modelBoardNormalDirection` names the axis (default `z+`): for a
+   * positive normal the outward reach is `max[axis] - origin[axis]`, and for a
+   * negative one it is `origin[axis] - min[axis]`.
+   *
+   * These are the model's own bounds, before `modelUnitToMmScale` or any
+   * object-fit scaling is applied.
+   *
+   * Whatever generates a part file already measures this to produce `size`.
+   */
+  modelBounds?: {
+    min: { x: number | string; y: number | string; z: number | string }
+    max: { x: number | string; y: number | string; z: number | string }
+  }
   size?: { x: number | string; y: number | string; z: number | string }
   modelUnitToMmScale?: Distance
   modelBoardNormalDirection?: CadModelAxisDirection
@@ -597,12 +618,6 @@ export interface CircleCutoutProps
   name?: string
   shape: "circle"
   radius: Distance
-}
-
-
-export interface CircleEnclosureCutoutApertureProps extends CircleShapeProps {
-  /** Additional clearance around the nominal opening. */
-  margin?: Distance
 }
 
 
@@ -860,6 +875,70 @@ export interface CustomDrcSelectAll {
 }
 
 
+export interface CutoutApertureProps {
+  /** Additional clearance around the nominal opening. */
+  margin?: Distance
+  /**
+   * Move the opening's **center** across the face it pierces, along the same two
+   * axes its `width` and `height` are measured in. Both may be negative.
+   *
+   * Sharing a frame with the dimensions is the point. These replace
+   * `zExtentAboveBoard`, which only made sense on the four walls: on the lid and
+   * the floor an opening does not move in Z at all, so a "Z extent" had no
+   * meaning there.
+   *
+   * Zero means "wherever the part puts it", which is usually right. On a side
+   * face the opening is centred on the part's body above the board, taken from
+   * the model's measured bounds, so it lines up with the connector without
+   * anyone computing a height. On the lid or the floor it is centred on the
+   * part's own position, and both offsets turn with the part.
+   *
+   * `heightDimensionOffset` runs **outward** from the mounting surface on a side
+   * face -- up for a top-mounted part, down for a bottom-mounted one -- so, like
+   * the default it shifts, it describes the part rather than where the part was
+   * placed. A negative value pulls the opening back toward and past the board,
+   * which is what a cable jacket fatter than its connector needs; the binding
+   * constraint is that the opening must not cut into the floor.
+   */
+  widthDimensionOffset?: Distance
+  /** See `widthDimensionOffset`. */
+  heightDimensionOffset?: Distance
+  /**
+   * Opening size along the normal of the face -- how far the cut is projected
+   * inboard, so nothing behind the face (the lid lip today, mounting bosses
+   * later) is left obstructing the part.
+   *
+   * Note this is the *third* aperture dimension, not a board-Z measurement: on a
+   * side face it runs horizontally, along X or Y. The vertical dimension of a
+   * side aperture is `height`.
+   *
+   * What it cuts is the material along that normal, which is generally not the
+   * face it entered: a large `z_pos` opening in a corner is sized across the face
+   * by `width`/`height`, and its depth relieves the side walls it
+   * overlaps. It is cut as authored and never capped, so a depth greater than
+   * the space behind the face reaches the shell on the far side and cuts that
+   * too. Beware on a horizontal face, where that shell is the floor only a few
+   * centimetres below: a tall pushbutton will bore straight through it.
+   *
+   * Usually unnecessary: the depth is otherwise derived from the part itself, by
+   * rotating the `cadModel` body's x/y extent onto the face normal and taking
+   * the PCB footprint as a floor. On a horizontal face the part's reach above
+   * the board is used instead, measured from `cadModel.modelBounds` about the
+   * point that sits on the board surface. Where those bounds were never
+   * measured it falls back to `cadModel.size.z`, which over-reports because it
+   * spans the pins and any through-board shell -- and since depth is not capped,
+   * that surplus can drive a lid cut through the floor. Measure the model, or
+   * set this explicitly.
+   *
+   * Set it to override that derivation where it is wrong for the purpose -- a
+   * body that tapers, or an extent that includes something not really in the way
+   * -- or to give a depth to a part that has no `cadModel`, which would
+   * otherwise be sized from its footprint alone.
+   */
+  depth?: Distance
+}
+
+
 export interface DifferentialPairProps {
   name?: string
   /** Name of the trace or pin carrying the positive signal. */
@@ -959,12 +1038,44 @@ export interface EditTraceHintEvent extends BaseManualEditEvent {
 
 
 export interface EnclosureFdmBoxProps {
+  /** Stable enclosure identity. */
+  name?: string
   /** The name or selector of the board enclosed by this box. */
   boardRef: string
+  /** Optional outside X dimension; inferred from the board when omitted. */
   width?: Distance
+  /** Optional outside Y dimension; inferred from the board when omitted. */
   height?: Distance
+  /** Optional total outside Z dimension; inferred from the board stack. */
   depth?: Distance
+  /** Printed side-wall thickness. */
   wallThickness?: Distance
+  /** Base floor thickness. */
+  floorThickness?: Distance
+  /** Lid top-plate thickness. */
+  lidThickness?: Distance
+  /** Horizontal clearance between the board edge and inside wall. */
+  boardClearance?: Distance
+  /** Gap from the inside floor to the PCB bottom. */
+  standoffHeight?: Distance
+  /**
+   * Clearance from the PCB top surface up to the inside of the lid.
+   *
+   * This is measured from the *board*, not from the tallest component: only
+   * parts that declare an aperture report their height, so an arbitrary tall
+   * capacitor is invisible here and setting this does not guarantee it clears.
+   *
+   * Omit it and the depth is inferred instead -- grown until the lid and its lip
+   * clear every side-wall aperture, so a connector taller than the default
+   * cannot end up straddling the base/lid seam. Setting it explicitly opts out
+   * of that: the value is then taken literally, which is what allows a part to
+   * deliberately poke through the lid.
+   */
+  topHeadroom?: Distance
+  /** Depth of the friction-fit lid lip. */
+  lidLipDepth?: Distance
+  /** Disable placement of apertures explicitly declared by enclosed components. */
+  disableCutouts?: boolean
 }
 
 
@@ -1719,12 +1830,6 @@ export interface PcbSxValue {
 }
 
 
-export interface PillEnclosureCutoutApertureProps extends PillShapeProps {
-  /** Additional clearance around the nominal opening. */
-  margin?: Distance
-}
-
-
 export interface PillHoleProps extends PcbLayoutProps {
   name?: string
   shape: "pill"
@@ -2063,12 +2168,6 @@ export interface RectCutoutProps
   shape: "rect"
   width: Distance
   height: Distance
-}
-
-
-export interface RectEnclosureCutoutApertureProps extends RectShapeProps {
-  /** Additional clearance around the nominal opening. */
-  margin?: Distance
 }
 
 
