@@ -22,21 +22,15 @@ export type EnclosureCutoutApertureShape = CommonShapeProps["shape"]
  *
  * ## Frame of reference
  *
- * An aperture's `width`/`height`/`depth` are measured in the frame of the face
- * it pierces, never in board or enclosure axes. They are the same words the
- * enclosure itself uses for its own X/Y/Z spans, but they belong to different
- * objects and the face fixes which axes they mean:
+ * An aperture is authored around the owning part's interaction axis, derived
+ * from its footprint `cutoutApertureDirection` or `insertionDirection`. On a
+ * side opening, `height` is board Z, `width` is perpendicular to that axis in
+ * the board plane, and `depth` follows the axis inboard. On the lid or floor,
+ * width and height rotate in-plane with the footprint and depth is vertical.
  *
- * | Face | `width` | `height` | `depth` |
- * | --- | --- | --- | --- |
- * | `x_pos`, `x_neg` | Y | **Z** | X |
- * | `y_pos`, `y_neg` | X | **Z** | Y |
- * | `z_pos`, `z_neg` | part-local | part-local | Z |
- *
- * So on any side face `height` is the vertical (board Z) dimension and `width`
- * runs along the wall. On a horizontal face the pair follows the part's own
- * rotation rather than being pinned to board X and Y, so an opening stays
- * aligned with the part it serves.
+ * The enclosure face is resolved later from where the transformed axis first
+ * intersects the box; it supplies a material plane, not the aperture's original
+ * coordinate frame.
  */
 export interface CutoutApertureProps {
   /** Additional clearance around the nominal opening. */
@@ -67,36 +61,20 @@ export interface CutoutApertureProps {
   /** See `widthDimensionOffset`. */
   heightDimensionOffset?: Distance
   /**
-   * Opening size along the normal of the face -- how far the cut is projected
-   * inboard, so nothing behind the face (the lid lip today, mounting bosses
-   * later) is left obstructing the part.
+   * How far the cutting tool continues inboard along the part's interaction
+   * axis, so the lid lip or other material behind the wall cannot obstruct it.
+   * On a side opening this axis may be oblique to X/Y; on the lid or floor it is
+   * vertical. The profile is cut as authored and never capped, so an explicitly
+   * excessive depth can reach the shell on the far side.
    *
-   * Note this is the *third* aperture dimension, not a board-Z measurement: on a
-   * side face it runs horizontally, along X or Y. The vertical dimension of a
-   * side aperture is `height`.
+   * Usually unnecessary: side depth is derived from the rotated CAD-body/PCB
+   * envelope. Horizontal depth uses the model's measured reach from the board
+   * and converts it to the cavity span beyond the plate's inner surface; where
+   * bounds are absent, `cadModel.size.z` is a less accurate fallback because it
+   * can include pins and through-board geometry.
    *
-   * What it cuts is the material along that normal, which is generally not the
-   * face it entered: a large `z_pos` opening in a corner is sized across the face
-   * by `width`/`height`, and its depth relieves the side walls it
-   * overlaps. It is cut as authored and never capped, so a depth greater than
-   * the space behind the face reaches the shell on the far side and cuts that
-   * too. Beware on a horizontal face, where that shell is the floor only a few
-   * centimetres below: a tall pushbutton will bore straight through it.
-   *
-   * Usually unnecessary: the depth is otherwise derived from the part itself, by
-   * rotating the `cadModel` body's x/y extent onto the face normal and taking
-   * the PCB footprint as a floor. On a horizontal face the part's reach above
-   * the board is used instead, measured from `cadModel.modelBounds` about the
-   * point that sits on the board surface. Where those bounds were never
-   * measured it falls back to `cadModel.size.z`, which over-reports because it
-   * spans the pins and any through-board shell -- and since depth is not capped,
-   * that surplus can drive a lid cut through the floor. Measure the model, or
-   * set this explicitly.
-   *
-   * Set it to override that derivation where it is wrong for the purpose -- a
-   * body that tapers, or an extent that includes something not really in the way
-   * -- or to give a depth to a part that has no `cadModel`, which would
-   * otherwise be sized from its footprint alone.
+   * Set this where that envelope is wrong for the purpose -- for example a
+   * tapered body -- or where a part has no CAD model.
    */
   depth?: Distance
 }

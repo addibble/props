@@ -904,36 +904,20 @@ export interface CutoutApertureProps {
   /** See `widthDimensionOffset`. */
   heightDimensionOffset?: Distance
   /**
-   * Opening size along the normal of the face -- how far the cut is projected
-   * inboard, so nothing behind the face (the lid lip today, mounting bosses
-   * later) is left obstructing the part.
+   * How far the cutting tool continues inboard along the part's interaction
+   * axis, so the lid lip or other material behind the wall cannot obstruct it.
+   * On a side opening this axis may be oblique to X/Y; on the lid or floor it is
+   * vertical. The profile is cut as authored and never capped, so an explicitly
+   * excessive depth can reach the shell on the far side.
    *
-   * Note this is the *third* aperture dimension, not a board-Z measurement: on a
-   * side face it runs horizontally, along X or Y. The vertical dimension of a
-   * side aperture is `height`.
+   * Usually unnecessary: side depth is derived from the rotated CAD-body/PCB
+   * envelope. Horizontal depth uses the model's measured reach from the board
+   * and converts it to the cavity span beyond the plate's inner surface; where
+   * bounds are absent, `cadModel.size.z` is a less accurate fallback because it
+   * can include pins and through-board geometry.
    *
-   * What it cuts is the material along that normal, which is generally not the
-   * face it entered: a large `z_pos` opening in a corner is sized across the face
-   * by `width`/`height`, and its depth relieves the side walls it
-   * overlaps. It is cut as authored and never capped, so a depth greater than
-   * the space behind the face reaches the shell on the far side and cuts that
-   * too. Beware on a horizontal face, where that shell is the floor only a few
-   * centimetres below: a tall pushbutton will bore straight through it.
-   *
-   * Usually unnecessary: the depth is otherwise derived from the part itself, by
-   * rotating the `cadModel` body's x/y extent onto the face normal and taking
-   * the PCB footprint as a floor. On a horizontal face the part's reach above
-   * the board is used instead, measured from `cadModel.modelBounds` about the
-   * point that sits on the board surface. Where those bounds were never
-   * measured it falls back to `cadModel.size.z`, which over-reports because it
-   * spans the pins and any through-board shell -- and since depth is not capped,
-   * that surplus can drive a lid cut through the floor. Measure the model, or
-   * set this explicitly.
-   *
-   * Set it to override that derivation where it is wrong for the purpose -- a
-   * body that tapers, or an extent that includes something not really in the way
-   * -- or to give a depth to a part that has no `cadModel`, which would
-   * otherwise be sized from its footprint alone.
+   * Set this where that envelope is wrong for the purpose -- for example a
+   * tapered body -- or where a part has no CAD model.
    */
   depth?: Distance
 }
