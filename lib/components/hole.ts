@@ -3,7 +3,18 @@ import { distance, type Distance } from "lib/common/distance"
 import { pcbLayoutProps, type PcbLayoutProps } from "lib/common/layout"
 import { expectTypesMatch } from "lib/typecheck"
 
-export interface CircleHoleProps extends PcbLayoutProps {
+/**
+ * A hole hosts declarative children that describe what the hole is *for* --
+ * today an `<enclosure.fdm.heatsetinsert>` or an `<assembly.screw>`, which turn
+ * a mounting hole into a fastening point. The hole itself renders none of them; each child is read by
+ * whatever owns that concern, exactly as `<enclosure.cutoutaperture>` is read
+ * by the enclosure rather than by the connector it is declared in.
+ */
+interface HoleChildrenProps {
+  children?: any
+}
+
+export interface CircleHoleProps extends PcbLayoutProps, HoleChildrenProps {
   name?: string
   shape?: "circle"
   diameter?: Distance
@@ -12,7 +23,7 @@ export interface CircleHoleProps extends PcbLayoutProps {
   coveredWithSolderMask?: boolean
 }
 
-export interface PillHoleProps extends PcbLayoutProps {
+export interface PillHoleProps extends PcbLayoutProps, HoleChildrenProps {
   name?: string
   shape: "pill"
   width: Distance
@@ -21,7 +32,7 @@ export interface PillHoleProps extends PcbLayoutProps {
   coveredWithSolderMask?: boolean
 }
 
-export interface OvalHoleProps extends PcbLayoutProps {
+export interface OvalHoleProps extends PcbLayoutProps, HoleChildrenProps {
   name?: string
   shape: "oval"
   width: Distance
@@ -30,13 +41,17 @@ export interface OvalHoleProps extends PcbLayoutProps {
   coveredWithSolderMask?: boolean
 }
 
-export interface RectHoleProps extends PcbLayoutProps {
+export interface RectHoleProps extends PcbLayoutProps, HoleChildrenProps {
   name?: string
   shape: "rect"
   width: Distance
   height: Distance
   solderMaskMargin?: Distance
   coveredWithSolderMask?: boolean
+}
+
+const holeChildrenProps = {
+  children: z.any().optional(),
 }
 
 export type HoleProps =
@@ -53,6 +68,7 @@ const circleHoleProps = pcbLayoutProps
     radius: distance.optional(),
     solderMaskMargin: distance.optional(),
     coveredWithSolderMask: z.boolean().optional(),
+    ...holeChildrenProps,
   })
   .transform((d) => ({
     ...d,
@@ -67,6 +83,7 @@ const pillHoleProps = pcbLayoutProps.extend({
   height: distance,
   solderMaskMargin: distance.optional(),
   coveredWithSolderMask: z.boolean().optional(),
+  ...holeChildrenProps,
 })
 
 const ovalHoleProps = pcbLayoutProps.extend({
@@ -76,6 +93,7 @@ const ovalHoleProps = pcbLayoutProps.extend({
   height: distance,
   solderMaskMargin: distance.optional(),
   coveredWithSolderMask: z.boolean().optional(),
+  ...holeChildrenProps,
 })
 
 const rectHoleProps = pcbLayoutProps.extend({
@@ -85,6 +103,7 @@ const rectHoleProps = pcbLayoutProps.extend({
   height: distance,
   solderMaskMargin: distance.optional(),
   coveredWithSolderMask: z.boolean().optional(),
+  ...holeChildrenProps,
 })
 
 export const holeProps = z.union([
