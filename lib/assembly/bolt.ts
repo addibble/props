@@ -2,6 +2,7 @@ import { type AssemblyThread, assemblyThread } from "lib/common/assemblyThread"
 import { type Distance, distance } from "lib/common/distance"
 import { expectTypesMatch } from "lib/typecheck"
 import { z } from "zod"
+import { screwHead, type ScrewHeadName } from "../common/screwHead"
 
 /**
  * A bolt that fastens the assembly together.
@@ -25,6 +26,15 @@ export interface AssemblyBoltProps {
   name?: string
   /** Nominal thread. */
   thread: AssemblyThread
+  /**
+   * Head shape, which decides the recess the enclosure cuts for it.
+   *
+   * Defaults to `socketcap`: it is the commonest fastener in this class and
+   * needs only a plain counterbore, so an author who has not thought about
+   * heads gets one that fits. Choose `countersunk` when the head must finish
+   * flush with the surface.
+   */
+  head?: ScrewHeadName
   /**
    * Length under the head. **Normally omitted and derived.**
    *
@@ -55,6 +65,7 @@ export interface AssemblyBoltProps {
 export const assemblyBoltProps = z.object({
   name: z.string().optional(),
   thread: assemblyThread,
+  head: screwHead.optional(),
   length: distance.optional(),
   holeRef: z.string().optional(),
   fastensLid: z.boolean().optional(),

@@ -2,6 +2,7 @@ import { type AssemblyThread, assemblyThread } from "lib/common/assemblyThread"
 import { type Distance, distance } from "lib/common/distance"
 import { expectTypesMatch } from "lib/typecheck"
 import { z } from "zod"
+import { screwHead, type ScrewHeadName } from "../common/screwHead"
 
 /**
  * A self-tapping (thread-forming) screw driven straight into a printed boss.
@@ -35,6 +36,15 @@ export interface AssemblyScrewProps {
   name?: string
   /** Nominal thread. */
   thread: AssemblyThread
+  /**
+   * Head shape, which decides the recess the enclosure cuts for it.
+   *
+   * Defaults to `socketcap`: it is the commonest fastener in this class and
+   * needs only a plain counterbore, so an author who has not thought about
+   * heads gets one that fits. Choose `countersunk` when the head must finish
+   * flush with the surface.
+   */
+  head?: ScrewHeadName
   /**
    * What kind of screw to buy, in the terms a supplier catalogue uses --
    * "phillips pan-head plastite thread-forming screw for thermoplastic".
@@ -105,6 +115,7 @@ export interface AssemblyScrewProps {
 export const assemblyScrewProps = z.object({
   name: z.string().optional(),
   thread: assemblyThread,
+  head: screwHead.optional(),
   designation: z.string().optional(),
   holeRef: z.string().optional(),
   threadEngagement: distance.optional(),
