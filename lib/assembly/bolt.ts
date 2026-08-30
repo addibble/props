@@ -33,8 +33,17 @@ export interface AssemblyBoltProps {
    * the same bounds the derivation would have used.
    */
   length?: Distance
-  /** Selector for the hole this bolt passes through. */
-  holeRef: string
+  /**
+   * Selector for the hole this bolt passes through. Omit it when the element is
+   * declared as a child of that hole.
+   *
+   * Optional for the same reason it is optional on `<assembly.screw />` and
+   * `<enclosure.fdm.heatsetinsert />`: nesting reads better when the hole
+   * exists for the fastener, and the selector reads better when the board is
+   * authored elsewhere. It is required exactly when the element is not a child
+   * of a hole, which the schema cannot see -- core validates it.
+   */
+  holeRef?: string
   /**
    * The bolt reaches through the lid and holds it down, rather than stopping at
    * the board. A lid bolt costs no floor area, because it reuses a hole the
@@ -47,7 +56,7 @@ export const assemblyBoltProps = z.object({
   name: z.string().optional(),
   thread: assemblyThread,
   length: distance.optional(),
-  holeRef: z.string().min(1),
+  holeRef: z.string().optional(),
   fastensLid: z.boolean().optional(),
 })
 

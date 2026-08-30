@@ -44,10 +44,21 @@ test("assembly.bolt threads are lowercase only", () => {
   ).toThrow()
 })
 
-test("assembly.bolt requires a hole to point at", () => {
-  expect(() =>
-    assemblyBoltProps.parse({ thread: "m3", length: "8mm" }),
-  ).toThrow()
+/**
+ * `holeRef` is optional on every fastener, because the RFC's primary syntax
+ * nests the element inside the hole it fastens -- the selector form exists for
+ * boards authored elsewhere. It is required exactly when the element is NOT a
+ * child of a hole, which the schema cannot see; core validates that.
+ *
+ * This was wrong for `assembly.bolt` alone, which required it while
+ * `assembly.screw` and `enclosure.fdm.heatsetinsert` did not. The inconsistency
+ * only surfaced when a playground authored the RFC's own example.
+ */
+test("assembly.bolt accepts a nested hole, with no holeRef", () => {
+  expect(assemblyBoltProps.parse({ thread: "m3", length: "8mm" })).toEqual({
+    thread: "m3",
+    length: 8,
+  })
 })
 
 test("assembly.bolt length is optional; it is derived from the stack", () => {
