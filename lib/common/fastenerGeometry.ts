@@ -42,8 +42,17 @@ export const threadFormingDefaults = {
    * that much back from the floor.
    */
   bottomClearanceRatio: 1,
-  /** Outer diameter of the bore's entry chamfer. */
-  boreEntryChamferRatio: 1.1,
+  /**
+   * How far the bore's entry chamfer stands proud of the bore it leads into.
+   *
+   * Expressed against the BORE, not the thread. A screw's pilot is narrower
+   * than its thread (0.8x) while an insert's install bore is wider than it
+   * (~1.33x at M3), so a ratio of the nominal diameter produces a chamfer
+   * outside the pilot but *inside* the insert bore -- which is not a small
+   * chamfer, it is no chamfer at all, silently, because the depth clamps at
+   * zero. Keyed to the bore, one number serves both.
+   */
+  boreEntryChamferRatio: 1.2,
 } as const
 
 export interface ThreadFormingGeometryMm {
@@ -68,22 +77,26 @@ export interface BoreEntryChamferMm {
 }
 
 export const resolveBoreEntryChamferMm = ({
-  thread,
   boreDiameterMm,
   ratio,
 }: {
-  thread: AssemblyThread
   /** The bore the chamfer leads into: a pilot for a screw, an install bore for an insert. */
   boreDiameterMm: number
   ratio?: number
 }): BoreEntryChamferMm => {
-  const outerDiameterMm =
-    assemblyThreadNominalDiameterMm[thread] *
-    (ratio ?? threadFormingDefaults.boreEntryChamferRatio)
+  const resolvedRatio = ratio ?? threadFormingDefaults.boreEntryChamferRatio
+  if (resolvedRatio < 1) {
+    throw new Error(
+      `boreEntryChamfer ratio ${resolvedRatio} is smaller than the bore it leads into, which would cut a chamfer inside the hole`,
+    )
+  }
+  const outerDiameterMm = boreDiameterMm * resolvedRatio
   return {
     outerDiameterMm,
-    // 45 degrees: the cone drops by the radial difference it spans.
-    depthMm: Math.max(0, (outerDiameterMm - boreDiameterMm) / 2),
+    // 45 degrees: the cone drops by the radial difference it spans. No clamp --
+    // the ratio is against this same bore and is checked above, so a zero depth
+    // now means someone asked for one rather than a mismatch of datums.
+    depthMm: (outerDiameterMm - boreDiameterMm) / 2,
   }
 }
 

@@ -191,16 +191,27 @@ test("assembly.screw carries the thread-forming overrides", () => {
 })
 
 test("bore entry chamfer is 45 degrees, so depth follows from the diameters", () => {
-  // M3: chamfer OD 1.1 x 3 = 3.3, pilot 2.4 -> depth (3.3-2.4)/2 = 0.45
-  const c = resolveBoreEntryChamferMm({ thread: "m3", boreDiameterMm: 2.4 })
-  expect(c.outerDiameterMm).toBeCloseTo(3.3, 5)
-  expect(c.depthMm).toBeCloseTo(0.45, 5)
+  // M3 pilot 2.4 -> chamfer OD 1.2 x 2.4 = 2.88, depth (2.88-2.4)/2 = 0.24
+  const c = resolveBoreEntryChamferMm({ boreDiameterMm: 2.4 })
+  expect(c.outerDiameterMm).toBeCloseTo(2.88, 5)
+  expect(c.depthMm).toBeCloseTo(0.24, 5)
 })
 
-test("an insert bore is wider, so the same chamfer ratio is shallower", () => {
-  const c = resolveBoreEntryChamferMm({ thread: "m3", boreDiameterMm: 4.0 })
-  // the bore is already wider than the chamfer, so there is nothing to cut
-  expect(c.depthMm).toBe(0)
+test("an insert bore gets a chamfer too, scaled to its own width", () => {
+  // The ratio is against the bore, so the wider install bore of an insert gets
+  // a proportionally wider lead-in -- not, as it once did, none at all. Keying
+  // this to the thread put the chamfer INSIDE a 4mm bore and the depth clamped
+  // silently to zero, so every insert was authored with a lead-in it never got.
+  const c = resolveBoreEntryChamferMm({ boreDiameterMm: 4.0 })
+  expect(c.outerDiameterMm).toBeCloseTo(4.8, 5)
+  expect(c.depthMm).toBeCloseTo(0.4, 5)
+  expect(c.depthMm).toBeGreaterThan(0)
+})
+
+test("a chamfer narrower than its own bore is refused, not clamped", () => {
+  expect(() =>
+    resolveBoreEntryChamferMm({ boreDiameterMm: 4.0, ratio: 0.9 }),
+  ).toThrow(/smaller than the bore/)
 })
 
 test("one boss derivation serves both fastening methods", () => {
