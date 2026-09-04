@@ -155,16 +155,98 @@ export interface AntennaProps extends CommonComponentProps {
 }
 
 
-export interface AssemblyDeviceProps {
-  /** Product-level assembly identity. */
+export interface AssemblyBoltProps {
+  /** Stable identity for selectors and generated part names. */
   name?: string
+  /** Nominal thread. */
+  thread: AssemblyThread
+  /**
+   * Head shape, which decides the recess the enclosure cuts for it.
+   *
+   * Defaults to `socketcap`: it is the commonest fastener in this class and
+   * needs only a plain counterbore, so an author who has not thought about
+   * heads gets one that fits. Choose `countersunk` when the head must finish
+   * flush with the surface.
+   */
+  head?: ScrewHeadName
+  /**
+   * Sink the head into the part it bears on, rather than letting it sit proud.
+   *
+   * The kind of recess follows from the head -- a cone for a countersunk head, a
+   * flat-bottomed bore for a cap, pan or button -- so this is only whether, not
+   * which. A countersunk head is recessed whether or not you ask, because it
+   * cannot seat on a flat face.
+   */
+  headRecess?: boolean
+  /**
+   * Length under the head. **Normally omitted and derived.**
+   *
+   * When authored, it is checked rather than trusted: a bolt that engages too
+   * little thread, or that bottoms out before it clamps, is reported against
+   * the same bounds the derivation would have used.
+   */
+  length?: Distance
+  /**
+   * Selector for the hole this bolt passes through. Omit it when the element is
+   * declared as a child of that hole.
+   *
+   * Optional for the same reason it is optional on `<assembly.screw />` and
+   * `<enclosure.fdm.heatsetinsert />`: nesting reads better when the hole
+   * exists for the fastener, and the selector reads better when the board is
+   * authored elsewhere. It is required exactly when the element is not a child
+   * of a hole, which the schema cannot see -- core validates it.
+   */
+  holeRef?: string
+  /**
+   * The bolt reaches through the lid and holds it down, rather than stopping at
+   * the board. A lid bolt costs no floor area, because it reuses a hole the
+   * board already has.
+   */
+  fastensLid?: boolean
+  /**
+   * Print a column down from the lid to the board, so the bolt clamps the board
+   * between it and the floor boss.
+   *
+   * This is what retains the PCB on a lid bolt: without it the bolt passes the
+   * board freely and only the floor boss holds it. The column is printed on the
+   * **lid**, hanging down -- standing it up from the floor would occupy the hole
+   * the board has to be lowered over, so it would block assembly.
+   *
+   * Absent means no column, so retention is something you ask for rather than
+   * something that appears. Only meaningful with `fastensLid`.
+   */
+  lidColumn?: boolean
 }
 
 
-export interface AssemblyScreenProps {
+export interface AssemblyCableProps {
+  /** Stable identity for selectors and generated part names. */
+  name?: string
+  /** One or two selectors naming the connectors this cable joins. */
+  connectsTo: string | [string] | [string, string]
+  /** Overall length. Inferred from the endpoints when omitted. */
+  length?: Distance
+  /** Jacket colour, for the model and the BOM line. */
+  color?: string
+}
+
+
+export interface AssemblyDeviceProps {
+  /** Product-level assembly identity. */
+  name?: string
+  /**
+   * How to draw this device. A footprinter or modelprinter string, or any of
+   * the model-file forms a component's `cadModel` accepts.
+   */
+  cadModel?: CadModelProp
+  children?: any
+}
+
+
+export interface AssemblyScreenProps extends AssemblyDeviceProps {
   /** Stable product-level identity for the screen assembly. */
   name: string
-  /** Selector for the connector that the screen attaches to. */
+  /** Selector for the connector this screen plugs into. */
   connectsTo: string
   /**
    * Outer width of the screen body, including its bezel but excluding the flex
@@ -176,11 +258,97 @@ export interface AssemblyScreenProps {
    * cable. When supplied, it must be provided together with `width`.
    */
   height?: Distance
+}
+
+
+export interface AssemblyScrewProps {
+  /** Stable identity for selectors and generated part names. */
+  name?: string
+  /** Nominal thread. */
+  thread: AssemblyThread
   /**
-   * Advanced modelprinter string used to render the screen assembly. Required
-   * when `width` and `height` are omitted.
+   * Head shape, which decides the recess the enclosure cuts for it.
+   *
+   * Defaults to `socketcap`: it is the commonest fastener in this class and
+   * needs only a plain counterbore, so an author who has not thought about
+   * heads gets one that fits. Choose `countersunk` when the head must finish
+   * flush with the surface.
    */
-  cadModel?: string
+  head?: ScrewHeadName
+  /**
+   * Sink the head into the part it bears on, rather than letting it sit proud.
+   *
+   * The kind of recess follows from the head -- a cone for a countersunk head, a
+   * flat-bottomed bore for a cap, pan or button -- so this is only whether, not
+   * which. A countersunk head is recessed whether or not you ask, because it
+   * cannot seat on a flat face.
+   */
+  headRecess?: boolean
+  /**
+   * What kind of screw to buy, in the terms a supplier catalogue uses --
+   * "phillips pan-head plastite thread-forming screw for thermoplastic".
+   *
+   * This is a **procurement query, not an identity**. It is passed to the parts
+   * engine to resolve a real part; it is never parsed by the render, and it is
+   * never used to group BOM lines, because two authors describe one screw two
+   * ways and that would split a line in half. Identity comes back from the
+   * engine as a manufacturer part number.
+   *
+   * Nothing the geometry depends on belongs in here. The thread, the
+   * engagement, the pilot bore and the bottom clearance are each their own
+   * prop, the length is derived, and the fastening method is the element.
+   */
+  designation?: string
+  /**
+   * Selector for the hole this screw goes through. Omit it when the element is
+   * declared as a child of that hole.
+   */
+  holeRef?: string
+
+  /**
+   * Depth of thread the boss must provide.
+   *
+   * Defaults to **2.5x the nominal diameter**, which suits a thread-forming
+   * screw in a common thermoplastic. Families differ, and so does the plastic:
+   * a glass-filled nylon needs less engagement than a soft polyolefin for the
+   * same pull-out. Until a parts engine can look this up per family, it is
+   * authored from the screw's own data sheet.
+   */
+  threadEngagement?: Distance
+
+  /**
+   * Diameter of the pilot bore the screw forms its thread in.
+   *
+   * Defaults to **0.8x the nominal diameter**. This is the single most
+   * material-sensitive number here: too tight and the boss splits or the screw
+   * shears, too loose and the thread strips. Every thread-forming family
+   * publishes its own value per material.
+   */
+  pilotDiameter?: Distance
+
+  /**
+   * Space below the screw tip, so it clamps rather than bottoming out.
+   *
+   * Defaults to **1x the nominal diameter**, the same rule and the same number
+   * a heat-set insert uses. A screw's tip pushes a slug of plastic ahead of it
+   * and an insert displaces melt; the bore swallows the difference either way.
+   */
+  bottomClearance?: Distance
+
+  /**
+   * Outer diameter of the bore's entry chamfer, as a **ratio of the screw's
+   * nominal diameter**. Defaults to **1.1**.
+   *
+   * The chamfer is always cut at 45 degrees, so its depth follows from this
+   * diameter and the pilot bore rather than being authored separately. It
+   * centres the tip so the first thread forms square, and stops the first turn
+   * lifting a lip around the hole.
+   *
+   * A ratio rather than a distance because it scales with the screw, and
+   * because the useful range is narrow -- much past 1.2 and the chamfer eats
+   * the engagement it was meant to protect.
+   */
+  boreEntryChamfer?: number
 }
 
 
@@ -480,6 +648,14 @@ export interface Border {
 }
 
 
+export interface BoreEntryChamferMm {
+  /** Diameter at the surface. */
+  outerDiameterMm: number
+  /** How far down the cone reaches before it meets the bore. */
+  depthMm: number
+}
+
+
 export interface BreakoutPointProps
   extends Omit<PcbLayoutProps, "pcbRotation" | "layer"> {
   connection: string
@@ -713,7 +889,7 @@ export interface CircleCutoutProps
 }
 
 
-export interface CircleHoleProps extends PcbLayoutProps {
+export interface CircleHoleProps extends PcbLayoutProps, HoleChildrenProps {
   name?: string
   shape?: "circle"
   diameter?: Distance
@@ -1164,6 +1340,45 @@ export interface EnclosureFdmBoxProps {
   disableCutouts?: boolean
   /** Show edges hidden behind the enclosure surface in compatible 3D viewers. */
   showHiddenEdges?: boolean
+}
+
+
+export interface EnclosureFdmHeatsetInsertProps {
+  /** Stable identity for selectors and generated part names. */
+  name?: string
+  /** Nominal thread the insert accepts. */
+  thread: AssemblyThread
+  /**
+   * Selector for the hole this insert sits under. Omit it when the element is
+   * declared as a child of that hole.
+   */
+  holeRef?: string
+
+  /**
+   * Depth kept below the insert so it seats rather than bottoming out.
+   *
+   * Defaults to **1x the nominal diameter**, the same rule and the same number
+   * a screw uses. The mechanism differs -- an insert displaces melt as the iron
+   * drives it in, where a screw's tip pushes a slug of plastic ahead of it --
+   * but the bore has to swallow the difference either way, and the enclosure
+   * does the same thing with the number in both cases.
+   */
+  bottomClearance?: Distance
+
+  /**
+   * Outer diameter of the install bore's entry chamfer, as a **ratio of the
+   * nominal thread diameter**. Defaults to **1.1**, cut at 45 degrees.
+   *
+   * An insert wants a lead-in for the same reason a screw does, but for a
+   * different mechanism: it keeps the insert square to the bore as the iron
+   * pushes it in, where a crooked start is what produces a proud or tilted
+   * insert.
+   *
+   * `threadEngagement` and `pilotDiameter` have no insert equivalent: an insert
+   * supplies its own thread, so engagement is its threaded length, and the bore
+   * is its installation diameter.
+   */
+  boreEntryChamfer?: number
 }
 
 
@@ -1802,7 +2017,7 @@ export interface OpAmpProps<PinLabel extends string = string>
 }
 
 
-export interface OvalHoleProps extends PcbLayoutProps {
+export interface OvalHoleProps extends PcbLayoutProps, HoleChildrenProps {
   name?: string
   shape: "oval"
   width: Distance
@@ -2037,7 +2252,7 @@ export interface PcbSxValue {
 }
 
 
-export interface PillHoleProps extends PcbLayoutProps {
+export interface PillHoleProps extends PcbLayoutProps, HoleChildrenProps {
   name?: string
   shape: "pill"
   width: Distance
@@ -2404,7 +2619,7 @@ export interface RectCutoutProps
 }
 
 
-export interface RectHoleProps extends PcbLayoutProps {
+export interface RectHoleProps extends PcbLayoutProps, HoleChildrenProps {
   name?: string
   shape: "rect"
   width: Distance
@@ -2987,6 +3202,13 @@ export interface TestpointProps extends CommonComponentProps {
    */
   height?: number | string
   connections?: TestpointConnections
+}
+
+
+export interface ThreadFormingGeometryMm {
+  threadEngagementMm: number
+  pilotDiameterMm: number
+  bottomClearanceMm: number
 }
 
 

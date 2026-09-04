@@ -1180,7 +1180,7 @@ export interface BaseGroupProps extends CommonLayoutProps, LayoutConfig {
 ### CircleHoleProps `<hole />`
 
 ```ts
-export interface CircleHoleProps extends PcbLayoutProps {
+export interface CircleHoleProps extends PcbLayoutProps, HoleChildrenProps {
   name?: string;
   shape?: "circle";
   diameter?: Distance;
