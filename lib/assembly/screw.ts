@@ -46,6 +46,15 @@ export interface AssemblyScrewProps {
    */
   head?: ScrewHeadName
   /**
+   * Sink the head into the part it bears on, rather than letting it sit proud.
+   *
+   * The kind of recess follows from the head -- a cone for a countersunk head, a
+   * flat-bottomed bore for a cap, pan or button -- so this is only whether, not
+   * which. A countersunk head is recessed whether or not you ask, because it
+   * cannot seat on a flat face.
+   */
+  headRecess?: boolean
+  /**
    * What kind of screw to buy, in the terms a supplier catalogue uses --
    * "phillips pan-head plastite thread-forming screw for thermoplastic".
    *
@@ -116,6 +125,7 @@ export const assemblyScrewProps = z.object({
   name: z.string().optional(),
   thread: assemblyThread,
   head: screwHead.optional(),
+  headRecess: z.boolean().optional(),
   designation: z.string().optional(),
   holeRef: z.string().optional(),
   threadEngagement: distance.optional(),

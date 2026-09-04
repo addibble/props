@@ -36,6 +36,15 @@ export interface AssemblyBoltProps {
    */
   head?: ScrewHeadName
   /**
+   * Sink the head into the part it bears on, rather than letting it sit proud.
+   *
+   * The kind of recess follows from the head -- a cone for a countersunk head, a
+   * flat-bottomed bore for a cap, pan or button -- so this is only whether, not
+   * which. A countersunk head is recessed whether or not you ask, because it
+   * cannot seat on a flat face.
+   */
+  headRecess?: boolean
+  /**
    * Length under the head. **Normally omitted and derived.**
    *
    * When authored, it is checked rather than trusted: a bolt that engages too
@@ -60,15 +69,30 @@ export interface AssemblyBoltProps {
    * board already has.
    */
   fastensLid?: boolean
+  /**
+   * Print a column down from the lid to the board, so the bolt clamps the board
+   * between it and the floor boss.
+   *
+   * This is what retains the PCB on a lid bolt: without it the bolt passes the
+   * board freely and only the floor boss holds it. The column is printed on the
+   * **lid**, hanging down -- standing it up from the floor would occupy the hole
+   * the board has to be lowered over, so it would block assembly.
+   *
+   * Absent means no column, so retention is something you ask for rather than
+   * something that appears. Only meaningful with `fastensLid`.
+   */
+  lidColumn?: boolean
 }
 
 export const assemblyBoltProps = z.object({
   name: z.string().optional(),
   thread: assemblyThread,
   head: screwHead.optional(),
+  headRecess: z.boolean().optional(),
   length: distance.optional(),
   holeRef: z.string().optional(),
   fastensLid: z.boolean().optional(),
+  lidColumn: z.boolean().optional(),
 })
 
 export type AssemblyBoltPropsInput = z.input<typeof assemblyBoltProps>
