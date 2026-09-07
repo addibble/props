@@ -10,13 +10,6 @@ import {
   assemblyScrewProps,
 } from "lib/assembly"
 import { enclosureFdmHeatsetInsertProps } from "lib/enclosure"
-import {
-  getBossOuterDiameterMm,
-  getMinimumBossOuterDiameterMm,
-  resolveBoreEntryChamferMm,
-  resolveBottomClearanceMm,
-  resolveThreadFormingGeometryMm,
-} from "lib/common/fastenerGeometry"
 
 test("parses assembly.bolt props", () => {
   const input: AssemblyBoltPropsInput = {
@@ -150,34 +143,6 @@ test("assembly.screw has no length: it is always derived", () => {
   ).toBe("phillips pan-head plastite thread-forming screw")
 })
 
-test("thread-forming geometry defaults to ratios of the nominal diameter", () => {
-  // 2.5x / 0.8x / 1x of 3mm
-  expect(resolveThreadFormingGeometryMm({ thread: "m3" })).toEqual({
-    threadEngagementMm: 7.5,
-    pilotDiameterMm: 2.4000000000000004,
-    bottomClearanceMm: 3,
-  })
-})
-
-test("thread-forming geometry is overridable per family and per plastic", () => {
-  expect(
-    resolveThreadFormingGeometryMm({
-      thread: "m3",
-      pilotDiameterMm: 2.6,
-      threadEngagementMm: 6,
-    }),
-  ).toEqual({
-    threadEngagementMm: 6,
-    pilotDiameterMm: 2.6,
-    bottomClearanceMm: 3,
-  })
-})
-
-test("a boss must be at least twice the screw diameter", () => {
-  expect(getMinimumBossOuterDiameterMm("m3")).toBe(6)
-  expect(getMinimumBossOuterDiameterMm("m2.5")).toBe(5)
-})
-
 test("assembly.screw carries the thread-forming overrides", () => {
   const parsed = assemblyScrewProps.parse({
     thread: "m3",
@@ -188,49 +153,6 @@ test("assembly.screw carries the thread-forming overrides", () => {
   expect(parsed.threadEngagement).toBe(6)
   expect(parsed.pilotDiameter).toBe(2.6)
   expect(parsed.bottomClearance).toBe(2)
-})
-
-test("bore entry chamfer is 45 degrees, so depth follows from the diameters", () => {
-  // M3 pilot 2.4 -> chamfer OD 1.2 x 2.4 = 2.88, depth (2.88-2.4)/2 = 0.24
-  const c = resolveBoreEntryChamferMm({ boreDiameterMm: 2.4 })
-  expect(c.outerDiameterMm).toBeCloseTo(2.88, 5)
-  expect(c.depthMm).toBeCloseTo(0.24, 5)
-})
-
-test("an insert bore gets a chamfer too, scaled to its own width", () => {
-  // The ratio is against the bore, so the wider install bore of an insert gets
-  // a proportionally wider lead-in -- not, as it once did, none at all. Keying
-  // this to the thread put the chamfer INSIDE a 4mm bore and the depth clamped
-  // silently to zero, so every insert was authored with a lead-in it never got.
-  const c = resolveBoreEntryChamferMm({ boreDiameterMm: 4.0 })
-  expect(c.outerDiameterMm).toBeCloseTo(4.8, 5)
-  expect(c.depthMm).toBeCloseTo(0.4, 5)
-  expect(c.depthMm).toBeGreaterThan(0)
-})
-
-test("a chamfer narrower than its own bore is refused, not clamped", () => {
-  expect(() =>
-    resolveBoreEntryChamferMm({ boreDiameterMm: 4.0, ratio: 0.9 }),
-  ).toThrow(/smaller than the bore/)
-})
-
-test("one boss derivation serves both fastening methods", () => {
-  // screw: the 2x floor binds
-  expect(
-    getBossOuterDiameterMm({
-      thread: "m3",
-      boreDiameterMm: 2.4,
-      minWallMm: 1.2,
-    }),
-  ).toBeCloseTo(6, 5)
-  // insert: the wall term binds
-  expect(
-    getBossOuterDiameterMm({
-      thread: "m3",
-      boreDiameterMm: 4.0,
-      minWallMm: 1.2,
-    }),
-  ).toBeCloseTo(6.4, 5)
 })
 
 test("assembly.screw and the insert both take a chamfer ratio", () => {
@@ -246,14 +168,7 @@ test("assembly.screw and the insert both take a chamfer ratio", () => {
   ).toBe(1.15)
 })
 
-test("bottom clearance is one rule for both fastening methods", () => {
-  expect(resolveBottomClearanceMm({ thread: "m3" })).toBe(3)
-  expect(resolveBottomClearanceMm({ thread: "m2.5" })).toBe(2.5)
-  expect(resolveBottomClearanceMm({ thread: "m3", bottomClearanceMm: 1 })).toBe(
-    1,
-  )
-
-  // and both elements accept it
+test("both fastening methods preserve authored bottom clearance", () => {
   expect(
     assemblyScrewProps.parse({ thread: "m3", bottomClearance: "2mm" })
       .bottomClearance,

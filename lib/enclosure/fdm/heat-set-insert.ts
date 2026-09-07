@@ -2,6 +2,7 @@ import { type AssemblyThread, assemblyThread } from "lib/common/assemblyThread"
 import { type Distance, distance } from "lib/common/distance"
 import { expectTypesMatch } from "lib/typecheck"
 import { z } from "zod"
+import { boreEntryChamferRatio } from "../../common/fastenerGeometry"
 
 /**
  * A heat-set insert melted into an enclosure boss so a bolt has metal threads
@@ -42,17 +43,16 @@ export interface EnclosureFdmHeatsetInsertProps {
   /**
    * Depth kept below the insert so it seats rather than bottoming out.
    *
-   * Defaults to **1x the nominal diameter**, the same rule and the same number
-   * a screw uses. The mechanism differs -- an insert displaces melt as the iron
-   * drives it in, where a screw's tip pushes a slug of plastic ahead of it --
-   * but the bore has to swallow the difference either way, and the enclosure
-   * does the same thing with the number in both cases.
+   * A nonnegative distance in mm (or a unit-bearing string). Omission delegates
+   * installation policy to the enclosure solver; an authored zero stays zero.
+   * This reserve accommodates the melt displaced as the iron seats the insert.
    */
   bottomClearance?: Distance
 
   /**
-   * Outer diameter of the install bore's entry chamfer, as a **ratio of the
-   * nominal thread diameter**. Defaults to **1.1**, cut at 45 degrees.
+   * Outer diameter of the entry chamfer divided by the **installation bore
+   * diameter**. The enclosure solver defaults to **1.2** when omitted, cut at
+   * 45 degrees. Must be finite and at least 1; 1 requests no chamfer.
    *
    * An insert wants a lead-in for the same reason a screw does, but for a
    * different mechanism: it keeps the insert square to the bore as the iron
@@ -70,8 +70,8 @@ export const enclosureFdmHeatsetInsertProps = z.object({
   name: z.string().optional(),
   thread: assemblyThread,
   holeRef: z.string().optional(),
-  bottomClearance: distance.optional(),
-  boreEntryChamfer: z.number().positive().optional(),
+  bottomClearance: distance.pipe(z.number().finite().nonnegative()).optional(),
+  boreEntryChamfer: boreEntryChamferRatio.optional(),
 })
 
 export type EnclosureFdmHeatsetInsertPropsInput = z.input<

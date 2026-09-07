@@ -308,8 +308,8 @@ export interface AssemblyScrewProps {
   /**
    * Depth of thread the boss must provide.
    *
-   * Defaults to **2.5x the nominal diameter**, which suits a thread-forming
-   * screw in a common thermoplastic. Families differ, and so does the plastic:
+   * A positive distance in mm (or a unit-bearing string). Omission delegates
+   * installation policy to the enclosure solver. Families differ, as does plastic:
    * a glass-filled nylon needs less engagement than a soft polyolefin for the
    * same pull-out. Until a parts engine can look this up per family, it is
    * authored from the screw's own data sheet.
@@ -319,7 +319,8 @@ export interface AssemblyScrewProps {
   /**
    * Diameter of the pilot bore the screw forms its thread in.
    *
-   * Defaults to **0.8x the nominal diameter**. This is the single most
+   * A positive distance in mm (or a unit-bearing string). Omission delegates
+   * installation policy to the enclosure solver. This is the most
    * material-sensitive number here: too tight and the boss splits or the screw
    * shears, too loose and the thread strips. Every thread-forming family
    * publishes its own value per material.
@@ -329,24 +330,24 @@ export interface AssemblyScrewProps {
   /**
    * Space below the screw tip, so it clamps rather than bottoming out.
    *
-   * Defaults to **1x the nominal diameter**, the same rule and the same number
-   * a heat-set insert uses. A screw's tip pushes a slug of plastic ahead of it
-   * and an insert displaces melt; the bore swallows the difference either way.
+   * A nonnegative distance in mm (or a unit-bearing string). Omission delegates
+   * installation policy to the enclosure solver; an authored zero stays zero.
    */
   bottomClearance?: Distance
 
   /**
-   * Outer diameter of the bore's entry chamfer, as a **ratio of the screw's
-   * nominal diameter**. Defaults to **1.1**.
+   * Outer diameter of the entry chamfer divided by the **pilot bore diameter**.
+   * The enclosure solver defaults to **1.2** when omitted. Must be finite and
+   * at least 1; 1 requests no chamfer.
    *
    * The chamfer is always cut at 45 degrees, so its depth follows from this
    * diameter and the pilot bore rather than being authored separately. It
    * centres the tip so the first thread forms square, and stops the first turn
    * lifting a lip around the hole.
    *
-   * A ratio rather than a distance because it scales with the screw, and
-   * because the useful range is narrow -- much past 1.2 and the chamfer eats
-   * the engagement it was meant to protect.
+   * A ratio rather than a distance because it scales with the actual bore.
+   * Large mouths consume engagement and boss wall; the solver diagnoses
+   * infeasible authored geometry rather than clamping it.
    */
   boreEntryChamfer?: number
 }
@@ -645,14 +646,6 @@ export interface Border {
   strokeWidth?: Distance
   dashed?: boolean
   solid?: boolean
-}
-
-
-export interface BoreEntryChamferMm {
-  /** Diameter at the surface. */
-  outerDiameterMm: number
-  /** How far down the cone reaches before it meets the bore. */
-  depthMm: number
 }
 
 
@@ -1357,17 +1350,16 @@ export interface EnclosureFdmHeatsetInsertProps {
   /**
    * Depth kept below the insert so it seats rather than bottoming out.
    *
-   * Defaults to **1x the nominal diameter**, the same rule and the same number
-   * a screw uses. The mechanism differs -- an insert displaces melt as the iron
-   * drives it in, where a screw's tip pushes a slug of plastic ahead of it --
-   * but the bore has to swallow the difference either way, and the enclosure
-   * does the same thing with the number in both cases.
+   * A nonnegative distance in mm (or a unit-bearing string). Omission delegates
+   * installation policy to the enclosure solver; an authored zero stays zero.
+   * This reserve accommodates the melt displaced as the iron seats the insert.
    */
   bottomClearance?: Distance
 
   /**
-   * Outer diameter of the install bore's entry chamfer, as a **ratio of the
-   * nominal thread diameter**. Defaults to **1.1**, cut at 45 degrees.
+   * Outer diameter of the entry chamfer divided by the **installation bore
+   * diameter**. The enclosure solver defaults to **1.2** when omitted, cut at
+   * 45 degrees. Must be finite and at least 1; 1 requests no chamfer.
    *
    * An insert wants a lead-in for the same reason a screw does, but for a
    * different mechanism: it keeps the insert square to the bore as the iron
@@ -3202,13 +3194,6 @@ export interface TestpointProps extends CommonComponentProps {
    */
   height?: number | string
   connections?: TestpointConnections
-}
-
-
-export interface ThreadFormingGeometryMm {
-  threadEngagementMm: number
-  pilotDiameterMm: number
-  bottomClearanceMm: number
 }
 
 

@@ -3,6 +3,7 @@ import { type Distance, distance } from "lib/common/distance"
 import { expectTypesMatch } from "lib/typecheck"
 import { z } from "zod"
 import { screwHead, type ScrewHeadName } from "../common/screwHead"
+import { boreEntryChamferRatio } from "../common/fastenerGeometry"
 
 /**
  * A self-tapping (thread-forming) screw driven straight into a printed boss.
@@ -78,8 +79,8 @@ export interface AssemblyScrewProps {
   /**
    * Depth of thread the boss must provide.
    *
-   * Defaults to **2.5x the nominal diameter**, which suits a thread-forming
-   * screw in a common thermoplastic. Families differ, and so does the plastic:
+   * A positive distance in mm (or a unit-bearing string). Omission delegates
+   * installation policy to the enclosure solver. Families differ, as does plastic:
    * a glass-filled nylon needs less engagement than a soft polyolefin for the
    * same pull-out. Until a parts engine can look this up per family, it is
    * authored from the screw's own data sheet.
@@ -89,7 +90,8 @@ export interface AssemblyScrewProps {
   /**
    * Diameter of the pilot bore the screw forms its thread in.
    *
-   * Defaults to **0.8x the nominal diameter**. This is the single most
+   * A positive distance in mm (or a unit-bearing string). Omission delegates
+   * installation policy to the enclosure solver. This is the most
    * material-sensitive number here: too tight and the boss splits or the screw
    * shears, too loose and the thread strips. Every thread-forming family
    * publishes its own value per material.
@@ -99,24 +101,24 @@ export interface AssemblyScrewProps {
   /**
    * Space below the screw tip, so it clamps rather than bottoming out.
    *
-   * Defaults to **1x the nominal diameter**, the same rule and the same number
-   * a heat-set insert uses. A screw's tip pushes a slug of plastic ahead of it
-   * and an insert displaces melt; the bore swallows the difference either way.
+   * A nonnegative distance in mm (or a unit-bearing string). Omission delegates
+   * installation policy to the enclosure solver; an authored zero stays zero.
    */
   bottomClearance?: Distance
 
   /**
-   * Outer diameter of the bore's entry chamfer, as a **ratio of the screw's
-   * nominal diameter**. Defaults to **1.1**.
+   * Outer diameter of the entry chamfer divided by the **pilot bore diameter**.
+   * The enclosure solver defaults to **1.2** when omitted. Must be finite and
+   * at least 1; 1 requests no chamfer.
    *
    * The chamfer is always cut at 45 degrees, so its depth follows from this
    * diameter and the pilot bore rather than being authored separately. It
    * centres the tip so the first thread forms square, and stops the first turn
    * lifting a lip around the hole.
    *
-   * A ratio rather than a distance because it scales with the screw, and
-   * because the useful range is narrow -- much past 1.2 and the chamfer eats
-   * the engagement it was meant to protect.
+   * A ratio rather than a distance because it scales with the actual bore.
+   * Large mouths consume engagement and boss wall; the solver diagnoses
+   * infeasible authored geometry rather than clamping it.
    */
   boreEntryChamfer?: number
 }
@@ -128,10 +130,10 @@ export const assemblyScrewProps = z.object({
   headRecess: z.boolean().optional(),
   designation: z.string().optional(),
   holeRef: z.string().optional(),
-  threadEngagement: distance.optional(),
-  pilotDiameter: distance.optional(),
-  bottomClearance: distance.optional(),
-  boreEntryChamfer: z.number().positive().optional(),
+  threadEngagement: distance.pipe(z.number().finite().positive()).optional(),
+  pilotDiameter: distance.pipe(z.number().finite().positive()).optional(),
+  bottomClearance: distance.pipe(z.number().finite().nonnegative()).optional(),
+  boreEntryChamfer: boreEntryChamferRatio.optional(),
 })
 
 export type AssemblyScrewPropsInput = z.input<typeof assemblyScrewProps>
