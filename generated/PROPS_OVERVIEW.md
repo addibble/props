@@ -158,7 +158,7 @@ export interface AntennaProps extends CommonComponentProps {
 export interface AssemblyBoltProps {
   /** Stable identity for selectors and generated part names. */
   name?: string
-  /** Nominal thread. */
+  /** Required nonempty thread designation; supported values are checked downstream. */
   thread: AssemblyThread
   /**
    * Head shape, which decides the recess the enclosure cuts for it.
@@ -264,7 +264,7 @@ export interface AssemblyScreenProps extends AssemblyDeviceProps {
 export interface AssemblyScrewProps {
   /** Stable identity for selectors and generated part names. */
   name?: string
-  /** Nominal thread. */
+  /** Required nonempty thread designation; supported values are checked downstream. */
   thread: AssemblyThread
   /**
    * Head shape, which decides the recess the enclosure cuts for it.
@@ -1339,7 +1339,7 @@ export interface EnclosureFdmBoxProps {
 export interface EnclosureFdmHeatsetInsertProps {
   /** Stable identity for selectors and generated part names. */
   name?: string
-  /** Nominal thread the insert accepts. */
+  /** Required nonempty thread designation; must match the bolt and resolve downstream. */
   thread: AssemblyThread
   /**
    * Selector for the hole this insert sits under. Omit it when the element is

@@ -27,14 +27,14 @@ test("parses assembly.bolt props", () => {
   })
 })
 
-test("assembly.bolt threads are lowercase only", () => {
-  expect(() =>
+test("assembly.bolt preserves thread spelling for downstream validation", () => {
+  expect(
     assemblyBoltProps.parse({
       thread: "M3",
       length: "8mm",
       holeRef: ".B1 .H1",
-    }),
-  ).toThrow()
+    }).thread,
+  ).toBe("M3")
 })
 
 /**

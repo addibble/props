@@ -32,7 +32,7 @@ import { boreEntryChamferRatio } from "../../common/fastenerGeometry"
 export interface EnclosureFdmHeatsetInsertProps {
   /** Stable identity for selectors and generated part names. */
   name?: string
-  /** Nominal thread the insert accepts. */
+  /** Required nonempty thread designation; must match the bolt and resolve downstream. */
   thread: AssemblyThread
   /**
    * Selector for the hole this insert sits under. Omit it when the element is

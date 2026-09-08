@@ -20,8 +20,10 @@ test("parses enclosure.fdm.heatsetinsert with a holeRef", () => {
   ).toEqual({ thread: "m3", holeRef: ".B1 .H1" })
 })
 
-test("threads are lowercase; the uppercase spelling is a different layer", () => {
-  expect(() => enclosureFdmHeatsetInsertProps.parse({ thread: "M3" })).toThrow()
+test("insert thread spelling is preserved for downstream validation", () => {
+  expect(enclosureFdmHeatsetInsertProps.parse({ thread: "M3" })).toEqual({
+    thread: "M3",
+  })
 })
 
 test("exposes the insert through the enclosure namespace", () => {

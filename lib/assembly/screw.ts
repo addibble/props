@@ -35,7 +35,7 @@ import { boreEntryChamferRatio } from "../common/fastenerGeometry"
 export interface AssemblyScrewProps {
   /** Stable identity for selectors and generated part names. */
   name?: string
-  /** Nominal thread. */
+  /** Required nonempty thread designation; supported values are checked downstream. */
   thread: AssemblyThread
   /**
    * Head shape, which decides the recess the enclosure cuts for it.
