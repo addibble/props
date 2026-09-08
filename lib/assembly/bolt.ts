@@ -29,9 +29,9 @@ export interface AssemblyBoltProps {
   /**
    * Head shape, which decides the recess the enclosure cuts for it.
    *
-   * Defaults to `socketcap`: it is the commonest fastener in this class and
-   * needs only a plain counterbore, so an author who has not thought about
-   * heads gets one that fits. Choose `countersunk` when the head must finish
+   * Any nonempty string is preserved; supported names are validated downstream.
+   * The mechanical resolver defaults to `socketcap`, which uses a plain
+   * counterbore when recessed. Choose `countersunk` when the head must finish
    * flush with the surface.
    */
   head?: ScrewHeadName
